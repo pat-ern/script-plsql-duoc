@@ -138,5 +138,39 @@ BEGIN
 END;
     
 
+-- CASO 4
+
+DECLARE
+    v_tipo_arr VARCHAR2(30); 
+    v_total_prop NUMBER(2); 
+    v_valor_total VARCHAR(20);
+    v_id_prop tipo_propiedad.id_tipo_propiedad%TYPE := '&ID_PROPIEDAD';
+
+BEGIN
+    SELECT tp.desc_tipo_propiedad,
+        COUNT(NRO_PROPIEDAD),
+        TO_CHAR(SUM(valor_arriendo), 'FML9G999G999')
+            INTO v_tipo_arr, v_total_prop, v_valor_total
+        FROM propiedad pr JOIN tipo_propiedad tp
+        ON pr.id_tipo_propiedad = tp.id_tipo_propiedad
+        WHERE pr.id_tipo_propiedad = v_id_prop
+        GROUP BY tp.desc_tipo_propiedad, tp.id_tipo_propiedad
+        ORDER BY tp.id_tipo_propiedad;
+
+    DBMS_OUTPUT.PUT_LINE('RESUMEN DE: '||v_tipo_arr);
+    DBMS_OUTPUT.PUT_LINE('Total de Propiedades: '||v_total_prop);
+    DBMS_OUTPUT.PUT_LINE('Valor Total Arriendo: '||v_valor_total);
     
-    
+END;  
+
+/*
+A   Casa sin Amoblar
+B   Casa Amoblada
+C   Departamento sin Amoblar
+D   Departamento Amoblado
+E   Local Comercial
+F   Parcela sin Casa
+G   Parcela con Casa
+H   Sitio
+
+*/
