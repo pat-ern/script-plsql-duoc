@@ -69,21 +69,18 @@ BEGIN
     VALUES (EXTRACT (YEAR FROM SYSDATE), v_numrun_emp, v_dvrun_emp, v_pnombre_emp||' '||v_snombre_emp||' '||v_appaterno_emp||' '||v_apmaterno_emp, v_sueldo_base, v_porc_movil_normal, v_valor_movil_normal, v_valor_movil_extra, v_valor_total_movil);
     COMMIT;
     
-    /*
-    DBMS_OUTPUT.PUT_LINE('v_numrun_emp '||v_numrun_emp);
-    DBMS_OUTPUT.PUT_LINE('v_pnombre_emp '||v_pnombre_emp);
-    DBMS_OUTPUT.PUT_LINE('v_appaterno_emp '||v_appaterno_emp);
-    DBMS_OUTPUT.PUT_LINE('v_nombre_comuna '||v_nombre_comuna);
-    DBMS_OUTPUT.PUT_LINE('v_porc_movil_normal '||v_porc_movil_normal);
-    DBMS_OUTPUT.PUT_LINE('v_valor_movil_normal '||v_valor_movil_normal);
-    DBMS_OUTPUT.PUT_LINE('v_valor_movil_extra '||v_valor_movil_extra);
-    DBMS_OUTPUT.PUT_LINE('v_valor_total_movil '||v_valor_total_movil);
-    */
-    
 END;
     
 
 -- CASO 2
+
+/*
+12648200
+11649964
+12456905
+12260812
+12642309
+*/
 
 DECLARE
 
