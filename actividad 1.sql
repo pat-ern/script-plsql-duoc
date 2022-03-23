@@ -1,5 +1,7 @@
 -- CASO 1
 
+-- agregar requerimiento de ganar menos de 500 mil y no ser empleado x 
+
 VAR b_porcentaje NUMBER
 EXEC :b_porcentaje := &porcentaje
 
@@ -23,6 +25,38 @@ BEGIN
     
 END;
 
+-- CASO 1 SOLUCION PROFE
+
+SET SERVEROUTPUT ON
+
+VAR v_porc_bonif NUMBER 
+EXEC :v_porc_bonif := 40
+
+DECLARE
+       v_run_empleado     VARCHAR2(10);
+       v_nombre_empleado  VARCHAR2(55);
+       v_sueldo_emp       empleado.sueldo_emp%TYPE;
+       v_bonif_empleado   NUMBER(10);
+BEGIN
+     DBMS_OUTPUT.PUT_LINE('DATOS CALCULOBONIFICACIÓN DEL ' || :v_porc_bonif || '% DEL SUELDO');
+     SELECT numrut_emp || '-' || dvrut_emp,
+            nombre_emp || ' ' || appaterno_emp || ' ' || apmaterno_emp,
+            sueldo_emp
+       INTO v_run_empleado,
+            v_nombre_empleado,
+            v_sueldo_emp
+       FROM empleado
+      WHERE numrut_emp = &RUN_EMPLEADO;
+      
+      v_bonif_empleado := v_sueldo_emp * (:v_porc_bonif / 100);
+      
+      DBMS_OUTPUT.PUT_LINE('Nombre Empleado: ' || v_nombre_empleado);
+      DBMS_OUTPUT.PUT_LINE('RUN : ' || v_run_empleado);
+      DBMS_OUTPUT.PUT_LINE('Sueldo: ' || v_sueldo_emp);
+      DBMS_OUTPUT.PUT_LINE('Bonificación extra : ' || v_bonif_empleado);
+     
+END;
+
 -- CASO 2
 
 VAR b_run_cliente NUMBER
@@ -33,7 +67,7 @@ DECLARE
     v_rut_cli VARCHAR2(12);
     v_est_civil estado_civil.desc_estcivil%TYPE;
     v_renta_cli VARCHAR2(20);
-    v_min_renta NUMBER(10):=&RENTA_MINIMA; -- duda
+    v_min_renta NUMBER(10):=&RENTA_MINIMA; -- duda con problema de redaccion y ej de pruebas
     
 BEGIN
     SELECT cli.nombre_cli||' '||cli.appaterno_cli||' '||cli.apmaterno_cli,
@@ -44,6 +78,7 @@ BEGIN
     FROM cliente cli JOIN estado_civil est
     ON cli.id_estcivil = est.id_estcivil
     WHERE numrut_cli = :b_run_cliente;
+    
     DBMS_OUTPUT.PUT_LINE('DATOS DEL CLIENTE');
     DBMS_OUTPUT.PUT_LINE('-----------------');
     DBMS_OUTPUT.PUT_LINE('Nombre: '||v_nom_cli);
@@ -52,6 +87,42 @@ BEGIN
     DBMS_OUTPUT.PUT_LINE('Renta: '||v_renta_cli);
     
 END;
+
+-- CASO 2 VERSION PROFE
+
+SET SERVEROUTPUT ON
+
+VAR v_numrun_cli NUMBER 
+EXEC :v_numrun_cli := 12487147
+
+DECLARE
+       v_run_cliente     VARCHAR2(10);
+       v_nombre_cliente  VARCHAR2(55);
+       v_renta_cli       cliente.renta_cli%TYPE;
+       v_desc_estcivil   estado_civil.desc_estcivil%TYPE;
+BEGIN
+     DBMS_OUTPUT.PUT_LINE('DATOS DEL CLIENTE');
+     DBMS_OUTPUT.PUT_LINE('-----------------');
+     
+     SELECT numrut_cli || '-' || dvrut_cli,
+            nombre_cli || ' ' || appaterno_cli || ' ' || apmaterno_cli,
+            renta_cli,
+            desc_estcivil
+       INTO v_run_cliente,
+            v_nombre_cliente,
+            v_renta_cli,
+            v_desc_estcivil
+       FROM cliente NATURAL JOIN estado_civil
+      WHERE numrut_cli = :v_numrun_cli;
+      
+            
+      DBMS_OUTPUT.PUT_LINE('Nombre : ' || v_nombre_cliente);
+      DBMS_OUTPUT.PUT_LINE('RUN : ' || v_run_cliente);
+      DBMS_OUTPUT.PUT_LINE('Estado Civil : ' || v_desc_estcivil);
+      DBMS_OUTPUT.PUT_LINE('Renta : ' || TO_CHAR(v_renta_cli, '$999G999G999'));
+     
+END;
+
 
 -- CASO 3
 
@@ -137,6 +208,51 @@ BEGIN
     
 END;
     
+-- CASO 3 VERSION PROFE
+
+SET SERVEROUTPUT ON
+
+VAR v_numrun_emp NUMBER 
+EXEC :v_numrun_emp := 12260812
+
+UNDEFINE v_reajuste_1
+UNDEFINE v_reajuste_2
+
+DECLARE
+       v_run_empleado     VARCHAR2(10);
+       v_nombre_empleado  VARCHAR2(55);
+       v_sueldo_emp       empleado.sueldo_emp%TYPE;
+      
+BEGIN
+     
+     SELECT numrut_emp || '-' || dvrut_emp,
+            nombre_emp || ' ' || appaterno_emp || ' ' || apmaterno_emp,
+            sueldo_emp
+
+       INTO v_run_empleado,
+            v_nombre_empleado,
+            v_sueldo_emp
+
+       FROM empleado
+      WHERE numrut_emp = :v_numrun_emp
+        AND sueldo_emp >= 200000 
+        AND sueldo_emp <= 400000;
+      
+      DBMS_OUTPUT.PUT_LINE('NOMBRE DEL EMPLEADO : ' || v_nombre_empleado);
+      DBMS_OUTPUT.PUT_LINE('RUN : ' || v_run_empleado);
+      
+      DBMS_OUTPUT.PUT_LINE('SIMULACION 1 : Aumentar en ' || &&v_reajuste_1 || '% el salario de todos los empleados');
+      DBMS_OUTPUT.PUT_LINE('Sueldo Actual: ' || v_sueldo_emp);
+      DBMS_OUTPUT.PUT_LINE('Sueldo Reajustado : ' || TO_CHAR(ROUND(v_sueldo_emp + (v_sueldo_emp * (&&v_reajuste_1 /100)))));
+      DBMS_OUTPUT.PUT_LINE('Reajuste : ' || TO_CHAR(ROUND(v_sueldo_emp * (&&v_reajuste_1 /100))));
+            
+      DBMS_OUTPUT.PUT_LINE('SIMULACION 2 : Aumentar en ' || &&v_reajuste_2 || '% que poseen salarios entre $200.000 y $400.000');
+      DBMS_OUTPUT.PUT_LINE('Sueldo Actual: ' || v_sueldo_emp);
+      DBMS_OUTPUT.PUT_LINE('Sueldo Reajustado : ' || TO_CHAR(ROUND(v_sueldo_emp + (v_sueldo_emp * (&&v_reajuste_2 /100)))));
+      DBMS_OUTPUT.PUT_LINE('Reajuste : ' || TO_CHAR(ROUND(v_sueldo_emp * (&&v_reajuste_2 /100))));
+     
+END;
+
 
 -- CASO 4
 
@@ -174,3 +290,44 @@ G   Parcela con Casa
 H   Sitio
 
 */
+
+-- CASO 4 VERSION PROFE
+
+SET SERVEROUTPUT ON
+
+/*
+A	Casa sin Amoblar
+B	Casa Amoblada
+C	Departamento sin Amoblar
+D	Departamento Amoblado
+E	Local Comercial
+F	Parcela sin Casa
+G	Parcela con Casa
+H	Sitio
+*/
+
+DECLARE
+       v_count_tipo_propiedad    NUMBER(10);
+       v_desc_tipo_propiedad     tipo_propiedad.desc_tipo_propiedad%TYPE;
+       v_sum_valor_arriendo      NUMBER(10);
+      
+BEGIN
+     
+     SELECT COUNT(id_tipo_propiedad),
+            desc_tipo_propiedad,
+            SUM(valor_arriendo)
+
+       INTO v_count_tipo_propiedad,
+            v_desc_tipo_propiedad,
+            v_sum_valor_arriendo
+
+       FROM propiedad NATURAL JOIN tipo_propiedad
+       WHERE id_tipo_propiedad = '&v_id_tipo_propiedad'
+       GROUP BY  desc_tipo_propiedad;
+      
+      DBMS_OUTPUT.PUT_LINE('RESUMEN DE : ' || v_desc_tipo_propiedad);
+      DBMS_OUTPUT.PUT_LINE('Total de Propiedades : ' || v_count_tipo_propiedad);
+      DBMS_OUTPUT.PUT_LINE('Valor Total Arriendo : ' || TO_CHAR(v_sum_valor_arriendo, '$999G999G999'));
+     
+     
+END;
