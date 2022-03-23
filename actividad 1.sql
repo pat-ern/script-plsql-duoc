@@ -322,7 +322,7 @@ BEGIN
             v_sum_valor_arriendo
 
        FROM propiedad NATURAL JOIN tipo_propiedad
-       WHERE id_tipo_propiedad = '&v_id_tipo_propiedad'
+       WHERE id_tipo_propiedad = UPPER('&v_id_tipo_propiedad')
        GROUP BY  desc_tipo_propiedad;
       
       DBMS_OUTPUT.PUT_LINE('RESUMEN DE : ' || v_desc_tipo_propiedad);
