@@ -80,3 +80,107 @@ BEGIN
     COMMIT;
 
 END;
+
+-- CASO 2
+/*
+pruebas:
+12362093
+07455786
+06604005
+08925537
+24617341
+*/
+
+SET SERVEROUTPUT ON
+
+DECLARE
+
+    v_run                   NUMBER(8) := &RUN;
+    
+    v_nro_cliente           cumpleanno_cliente.nro_cliente%TYPE;  
+    v_run_cliente           cumpleanno_cliente.run_cliente%TYPE;
+    v_nombre_cliente        cumpleanno_cliente.nombre_cliente%TYPE;
+    v_profesion_oficio      cumpleanno_cliente.profesion_oficio%TYPE;
+    v_dia_cumpleano         cumpleanno_cliente.dia_cumpleano%TYPE;
+    v_fecha_nacimiento      cliente.fecha_nacimiento%TYPE;
+    v_monto_total_ahorrado  producto_inversion_cliente.monto_total_ahorrado%TYPE;
+    
+    v_monto_gifcard         cumpleanno_cliente.monto_gifcard%TYPE;
+    v_observacion           cumpleanno_cliente.observacion%TYPE;
+
+BEGIN
+
+    SELECT nro_cliente,
+        TO_CHAR(numrun, 'FM09G999G999')||'-'||dvrun,
+        INITCAP(pnombre||' '||snombre||' '||appaterno||' '||apmaterno),
+        nombre_prof_ofic,
+        TO_CHAR(fecha_nacimiento, 'DD')||' de '||TO_CHAR(fecha_nacimiento, 'Month'),
+        fecha_nacimiento,
+        monto_total_ahorrado
+        
+        INTO v_nro_cliente,
+            v_run_cliente,
+            v_nombre_cliente,
+            v_profesion_oficio,
+            v_dia_cumpleano,
+            v_fecha_nacimiento,
+            v_monto_total_ahorrado
+        
+        FROM cliente NATURAL JOIN profesion_oficio
+        NATURAL JOIN producto_inversion_cliente
+        WHERE numrun = v_run;
+        
+    IF EXTRACT(MONTH FROM v_fecha_nacimiento) = EXTRACT(MONTH FROM ADD_MONTHS(SYSDATE, 1)) THEN -- TRUE si esta de cumple el mes siguiente   
+        IF v_monto_total_ahorrado BETWEEN 0 AND 900000 THEN v_monto_gifcard := 0;
+        ELSIF v_monto_total_ahorrado BETWEEN 900001 AND 2000000 THEN v_monto_gifcard := 50000;
+        ELSIF v_monto_total_ahorrado BETWEEN 2000001 AND 5000000 THEN v_monto_gifcard := 100000;
+        ELSIF v_monto_total_ahorrado BETWEEN 5000001 AND 8000000 THEN v_monto_gifcard := 200000;
+        ELSIF v_monto_total_ahorrado BETWEEN 8000001 AND 15000000 THEN v_monto_gifcard := 300000;
+        END IF;
+    ELSE v_observacion := 'El cliente no esta de cumpleaños en el mes procesado';
+    END IF;
+
+    INSERT INTO cumpleanno_cliente
+        VALUES (v_nro_cliente,
+                v_run_cliente,
+                v_nombre_cliente,
+                v_profesion_oficio,
+                v_dia_cumpleano,
+                v_monto_gifcard,
+                v_observacion);
+    
+EXCEPTION WHEN NO_DATA_FOUND THEN -- cuando no arroja data es porque no tiene productos de inversion
+
+    SELECT nro_cliente,
+        TO_CHAR(numrun, 'FM09G999G999')||'-'||dvrun,
+        INITCAP(pnombre||' '||snombre||' '||appaterno||' '||apmaterno),
+        nombre_prof_ofic,
+        TO_CHAR(fecha_nacimiento, 'DD')||' de '||TO_CHAR(fecha_nacimiento, 'Month'),
+        fecha_nacimiento
+        
+        INTO v_nro_cliente,
+            v_run_cliente,
+            v_nombre_cliente,
+            v_profesion_oficio,
+            v_dia_cumpleano,
+            v_fecha_nacimiento
+        
+        FROM cliente NATURAL JOIN profesion_oficio
+        WHERE numrun = v_run;  
+                                                  
+    IF EXTRACT(MONTH FROM v_fecha_nacimiento) = EXTRACT(MONTH FROM ADD_MONTHS(SYSDATE, 1)) THEN -- TRUE si esta de cumple el mes siguiente
+        v_monto_gifcard := 0;
+    ELSE v_observacion := 'El cliente no esta de cumpleaños en el mes procesado';
+    END IF;
+
+    INSERT INTO cumpleanno_cliente
+    VALUES (v_nro_cliente,
+            v_run_cliente,
+            v_nombre_cliente,
+            v_profesion_oficio,
+            v_dia_cumpleano,
+            v_monto_gifcard,
+            v_observacion);
+
+END;
+
