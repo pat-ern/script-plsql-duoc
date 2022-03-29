@@ -1,0 +1,217 @@
+-- CASO 1
+
+TRUNCATE TABLE proy_movilizacion;
+
+SET SERVEROUTPUT ON
+
+VAR b_anno_proceso NUMBER
+EXEC :b_anno_proceso := EXTRACT(YEAR FROM SYSDATE)
+
+DECLARE
+
+    --VARIABLES OBTENIDAS EN SENTENCIA SELECT1
+    v_min_id            empleado.id_emp%TYPE;            
+    v_max_id            empleado.id_emp%TYPE;
+    
+    --VARIABLES OBTENIDAS EN SENTENCIA SELECT2
+    v_id_emp            empleado.id_emp%TYPE;
+    v_numrun_emp        empleado.numrun_emp%TYPE; 
+    v_dvrun_emp         empleado.dvrun_emp%TYPE; 
+    v_pnombre_emp       empleado.pnombre_emp%TYPE; 
+    v_snombre_emp       empleado.snombre_emp%TYPE;
+    v_appaterno_emp     empleado.appaterno_emp%TYPE;
+    v_apmaterno_emp     empleado.apmaterno_emp%TYPE;
+    v_sueldo_base       empleado.sueldo_base%TYPE;
+    v_nombre_comuna     comuna.nombre_comuna%TYPE;
+    
+    --VARIABLES CALCULADAS
+    v_porc_movil_normal  proy_movilizacion.porc_movil_normal%TYPE;
+    v_valor_movil_normal proy_movilizacion.valor_movil_normal%TYPE;
+    v_valor_movil_extra  proy_movilizacion.valor_movil_extra%TYPE;
+    v_valor_total_movil  proy_movilizacion.valor_total_movil%TYPE;
+
+BEGIN
+
+    SELECT MIN(id_emp), MAX(id_emp)
+        INTO v_min_id, v_max_id    
+        FROM empleado;  
+        
+    WHILE v_max_id >= v_min_id LOOP --CONDICION
+
+        SELECT id_emp,
+            numrun_emp,
+            dvrun_emp, 
+            pnombre_emp, 
+            snombre_emp,
+            appaterno_emp,
+            apmaterno_emp,
+            sueldo_base,
+            nombre_comuna
+            
+            INTO v_id_emp,
+                v_numrun_emp, 
+                v_dvrun_emp, 
+                v_pnombre_emp, 
+                v_snombre_emp,
+                v_appaterno_emp,
+                v_apmaterno_emp,
+                v_sueldo_base,
+                v_nombre_comuna
+                
+            FROM empleado NATURAL JOIN comuna
+            WHERE id_emp = v_min_id; --CONDICION PARA RESULTADO DE FILA UNICA
+        
+        --ASIGNACION DE VALORES SEGUN COMUNA      
+        CASE v_nombre_comuna 
+            WHEN 'María Pinto' THEN v_valor_movil_extra := 20000;
+            WHEN 'Curacaví' THEN v_valor_movil_extra := 25000;
+            WHEN 'Talagante' THEN v_valor_movil_extra := 30000;
+            WHEN 'El Monte' THEN v_valor_movil_extra := 35000;
+            WHEN 'Buin' THEN v_valor_movil_extra := 40000;
+            ELSE v_valor_movil_extra := 0;
+        END CASE;
+        
+        --CALCULO DE VALORES
+        v_porc_movil_normal := TRUNC(v_sueldo_base/100000);
+        v_valor_movil_normal := v_sueldo_base * v_porc_movil_normal/100;
+        v_valor_total_movil := v_valor_movil_normal + v_valor_movil_extra;
+        
+        --INSERCION EN TABLA PROY_MOVILIZACION
+        INSERT INTO proy_movilizacion
+        VALUES (:b_anno_proceso, 
+                v_id_emp, 
+                v_numrun_emp, 
+                v_dvrun_emp, 
+                v_pnombre_emp||' '||v_snombre_emp||' '||v_appaterno_emp||' '||v_apmaterno_emp, 
+                v_nombre_comuna, 
+                v_sueldo_base, 
+                v_porc_movil_normal, 
+                v_valor_movil_normal, 
+                v_valor_movil_extra, 
+                v_valor_total_movil);
+                
+        COMMIT;
+        
+        --INCREMENTO DE MIN_ID
+        v_min_id := v_min_id + 10;
+        
+    END LOOP;    
+    
+END;
+
+/*
+
+REQUERIMIENTOS PENDIENTES: 
+
+Uso de variables BIND para definir: 
+a) Comunas a las que se les paga movilización adicional.
+b) Valor de movilización adicional para las comunas indicadas.
+
+*/
+
+-- CASO 2
+
+TRUNCATE TABLE usuario_clave;
+
+SET SERVEROUTPUT ON
+
+DECLARE
+
+    v_max_id                empleado.id_emp%TYPE;
+    v_min_id                empleado.id_emp%TYPE;
+    
+    v_id_emp                empleado.id_emp%TYPE;
+    v_numrun_emp            empleado.numrun_emp%TYPE; 
+    v_dvrun_emp             empleado.dvrun_emp%TYPE;
+    v_pnombre_emp           empleado.pnombre_emp%TYPE;
+    v_snombre_emp           empleado.snombre_emp%TYPE;
+    v_appaterno_emp         empleado.appaterno_emp%TYPE;
+    v_apmaterno_emp         empleado.apmaterno_emp%TYPE;
+    v_fecha_nac             empleado.fecha_nac%TYPE;
+    v_fecha_contrato        empleado.fecha_contrato%TYPE;
+    v_sueldo_base           empleado.sueldo_base%TYPE;
+    v_nombre_estado_civil   estado_civil.nombre_estado_civil%TYPE;
+    
+    v_nombre_usuario VARCHAR2(30); 
+    v_clave_usuario VARCHAR2(30);
+
+BEGIN
+
+    SELECT MIN(id_emp), MAX(id_emp)
+        INTO v_min_id, v_max_id    
+        FROM empleado;  
+        
+    WHILE v_max_id >= v_min_id LOOP --CONDICION
+
+        SELECT id_emp,
+            numrun_emp,
+            dvrun_emp,
+            pnombre_emp,
+            snombre_emp,
+            appaterno_emp,
+            apmaterno_emp,
+            fecha_nac,
+            fecha_contrato,
+            sueldo_base,
+            nombre_estado_civil
+
+            INTO v_id_emp,
+                v_numrun_emp, 
+                v_dvrun_emp, 
+                v_pnombre_emp, 
+                v_snombre_emp,
+                v_appaterno_emp,
+                v_apmaterno_emp,
+                v_fecha_nac,
+                v_fecha_contrato,
+                v_sueldo_base,
+                v_nombre_estado_civil
+
+            FROM empleado NATURAL JOIN comuna
+            NATURAL JOIN estado_civil
+            
+            WHERE id_emp = v_min_id;
+
+        v_nombre_usuario :=  
+
+        LOWER(SUBSTR(v_nombre_estado_civil, 0, 1))||
+        SUBSTR(v_pnombre_emp, 0, 3)|| 
+        LENGTH(v_pnombre_emp)|| 
+        '*'||
+        SUBSTR(TO_CHAR(v_sueldo_base, '9999999'), -1, 1)|| 
+        v_dvrun_emp|| 
+        ROUND(MONTHS_BETWEEN(SYSDATE, v_fecha_contrato)/12)|| 
+        CASE WHEN ROUND(MONTHS_BETWEEN(SYSDATE, v_fecha_contrato)/12) < 10 THEN 'X'
+            ELSE NULL
+        END;
+
+        v_clave_usuario :=  
+
+        SUBSTR(TO_CHAR(v_numrun_emp, '99999999'), 4, 1)||-- tercer digito del run
+        (EXTRACT (YEAR FROM v_fecha_nac)+2)||-- anno de nacimiento aumentado en 2
+        SUBSTR(TO_CHAR(v_sueldo_base-1, '9999999'), -3, 3)||-- 3 ultimos digitos del sueldo disminuido en 1 
+        LOWER(CASE v_nombre_estado_civil 
+            WHEN 'CASADO' THEN SUBSTR(v_appaterno_emp, 0, 2)
+            WHEN 'ACUERDO DE UNION CIVIL' THEN SUBSTR(v_appaterno_emp, 0, 2)
+            WHEN 'DIVORCIADO' THEN SUBSTR(v_appaterno_emp, 0, 1)||SUBSTR(v_appaterno_emp, -1, 1)
+            WHEN 'SOLTERO' THEN SUBSTR(v_appaterno_emp, 0, 1)||SUBSTR(v_appaterno_emp, -1, 1)
+            WHEN 'VIUDO' THEN SUBSTR(v_appaterno_emp, -3, 2)
+            WHEN 'SEPARADO' THEN SUBSTR(v_appaterno_emp, -2, 2)
+        END)|| -- 2 letras del apellido paterno
+        v_id_emp|| --id empleado
+        TO_CHAR(SYSDATE, 'MMYYYY'); --mes y anno en formato numerico
+
+        INSERT INTO usuario_clave 
+            VALUES (v_id_emp, 
+                    v_numrun_emp, 
+                    v_dvrun_emp, 
+                    v_pnombre_emp||' '||v_snombre_emp||' '||v_appaterno_emp||' '||v_apmaterno_emp, 
+                    v_nombre_usuario, 
+                    v_clave_usuario);
+        COMMIT;
+    
+        v_min_id := v_min_id + 10;
+
+    END LOOP;   
+
+END;
