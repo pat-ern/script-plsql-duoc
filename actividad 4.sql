@@ -215,3 +215,83 @@ BEGIN
     END LOOP;   
 
 END;
+
+-- CASO 3 
+
+TRUNCATE TABLE hist_arriendo_anual_camion;
+
+SET SERVEROUTPUT ON
+
+DECLARE
+
+    v_max_id                camion.id_camion%TYPE;
+    v_min_id                camion.id_camion%TYPE;
+
+    v_anno_proceso          hist_arriendo_anual_camion.anno_proceso%TYPE;
+    v_nro_patente           hist_arriendo_anual_camion.nro_patente%TYPE;
+    v_id_camion             hist_arriendo_anual_camion.id_camion%TYPE;
+    v_valor_arriendo_dia    hist_arriendo_anual_camion.valor_arriendo_dia%TYPE;
+    v_valor_garantia_dia    hist_arriendo_anual_camion.valor_garactia_dia%TYPE;
+    v_total_veces_arrendado hist_arriendo_anual_camion.total_veces_arrendado%TYPE;
+
+    v_porc_ajuste         NUMBER(3,3) := 1-&PORC_AJUSTE/100;
+
+BEGIN
+
+    SELECT MIN(id_camion), MAX(id_camion)
+        INTO v_min_id, v_max_id    
+        FROM camion;  
+
+    FOR i IN v_min_id .. v_max_id LOOP
+
+        SELECT EXTRACT(YEAR FROM SYSDATE),
+            cam.nro_patente, 
+            cam.id_camion,
+            cam.valor_arriendo_dia,
+            cam.valor_garantia_dia,
+            COUNT(arr.id_arriendo)  
+
+            INTO v_anno_proceso,
+                v_nro_patente,
+                v_id_camion,
+                v_valor_arriendo_dia,
+                v_valor_garantia_dia,
+                v_total_veces_arrendado
+
+        FROM camion cam LEFT JOIN arriendo_camion arr
+        ON cam.id_camion = arr.id_camion 
+        AND EXTRACT(YEAR FROM arr.fecha_ini_arriendo) = EXTRACT(YEAR FROM SYSDATE)-1
+        
+        WHERE cam.id_camion = v_min_id
+        
+        GROUP BY EXTRACT(YEAR FROM SYSDATE), 
+                cam.nro_patente, 
+                cam.id_camion,
+                cam.valor_arriendo_dia, 
+                cam.valor_garantia_dia; 
+        
+        INSERT INTO hist_arriendo_anual_camion
+            VALUES (v_anno_proceso,
+                    v_id_camion,
+                    v_nro_patente, 
+                    v_valor_arriendo_dia, 
+                    v_valor_garantia_dia, 
+                    v_total_veces_arrendado);
+            
+        IF v_total_veces_arrendado < 4 THEN
+            v_valor_arriendo_dia := v_valor_arriendo_dia*v_porc_ajuste;
+            v_valor_garantia_dia := v_valor_garantia_dia*v_porc_ajuste;
+        END IF;
+        
+        UPDATE camion
+            SET valor_arriendo_dia = v_valor_arriendo_dia,
+                valor_garantia_dia = v_valor_garantia_dia
+            WHERE nro_patente = v_nro_patente;
+                    
+        COMMIT;
+
+    v_min_id := v_min_id + 1;
+
+    END LOOP;            
+
+END;
