@@ -1,118 +1,122 @@
+CREATE TABLE liquidacion 
+    (id_emp NUMBER NOT NULL, 
+    fecha_liquidacion DATE NOT NULL,
+    salario_base NUMBER NOT NULL, 
+    bono_depto NUMBER NOT NULL, 
+    bono_trabajo NUMBER NOT NULL, 
+    bono_antiguedad NUMBER NOT NULL, 
+    desc_salud NUMBER NOT NULL, 
+    desc_afp NUMBER NOT NULL, 
+    total_desc NUMBER NOT NULL, 
+    total_bonos NUMBER NOT NULL, 
+    total_liquido NUMBER NOT NULL, 
+    CONSTRAINT liquidacion PRIMARY KEY 
+        (id_emp, fecha_liquidacion) ENABLE);
+
+TRUNCATE TABLE liquidacion;
+
 DECLARE 
 
-    V_ID_EMP                NUMBER;
-    --V_FECHA_LIQUIDACION     DATE;
-    V_SALARIO_BASE          NUMBER;
-    V_BONO_DEPTO            NUMBER;
-    V_BONO_TRABAJO          NUMBER;
-    V_BONO_ANTIGUEDAD       NUMBER;
-    V_DESC_SALUD            NUMBER;
-    V_DESC_AFP              NUMBER;
-    V_TOTAL_DESC            NUMBER;
-    V_TOTAL_BONOS           NUMBER;
-    V_TOTAL_LIQUIDO         NUMBER;
+    v_id_emp                NUMBER;
+    v_salario_base          NUMBER;
+
+    v_bono_depto            NUMBER;
+    v_bono_trabajo          NUMBER;
+    v_bono_antiguedad       NUMBER;
+
+    v_desc_salud            NUMBER;
+    v_desc_afp              NUMBER;
+
+    v_total_desc            NUMBER;
+    v_total_bonos           NUMBER;
+    v_total_liquido         NUMBER;
     
-    V_DEPARTAMENTO          VARCHAR(40);
-    V_TRABAJO               VARCHAR(40);
-    V_ANTIGUEDAD            NUMBER(10);
-    
-    V_TOTAL_EMP             NUMBER;
-    V_MIN_EMP               NUMBER;
-    
+    v_departamento          VARCHAR(40);
+    v_trabajo               VARCHAR(40);
+    v_antiguedad            NUMBER(10);
+ 
+    v_min_id                NUMBER;    
+    v_max_id                NUMBER;
+
 BEGIN
 
-    SELECT COUNT(EMPLOYEE_ID), MIN(EMPLOYEE_ID)
-        INTO V_TOTAL_EMP, V_MIN_EMP
-        FROM EMPLOYEES;
+    SELECT MIN(employee_id), MAX(employee_id)
+        INTO v_min_id, v_max_id
+        FROM employees;
     
-    FOR i IN 1 .. V_TOTAL_EMP LOOP
+    FOR i IN v_min_id .. v_max_id LOOP
         
-        SELECT E.EMPLOYEE_ID,
+        SELECT E.employee_id,
             E.SALARY,
             J.JOB_TITLE,
             D.DEPARTMENT_NAME,
             TRUNC(MONTHS_BETWEEN(SYSDATE, E.HIRE_DATE)/12)
             
-        INTO V_ID_EMP,
-            V_SALARIO_BASE,
-            V_TRABAJO,
-            V_DEPARTAMENTO,
-            V_ANTIGUEDAD
+        INTO v_id_emp,
+            v_salario_base,
+            v_trabajo,
+            v_departamento,
+            v_antiguedad
             
-        FROM EMPLOYEES E
-        JOIN JOBS J ON J.JOB_ID = E.JOB_ID
-        JOIN DEPARTMENTS D ON D.DEPARTMENT_ID = E.DEPARTMENT_ID
-        WHERE E.EMPLOYEE_ID = V_MIN_EMP;
+        FROM employees E
+        JOIN jobs J ON J.job_id = E.job_id
+        JOIN departments D ON D.department_id = E.department_id
+        WHERE E.employee_id = v_min_id;
         
-        --V_BONO_DEPTO
-        CASE V_DEPARTAMENTO 
-            WHEN 'Human Resources' THEN V_BONO_DEPTO := V_SALARIO_BASE*20/100;
-            WHEN 'Shipping' THEN V_BONO_DEPTO := V_SALARIO_BASE*25/100;
-            WHEN 'IT' THEN V_BONO_DEPTO := V_SALARIO_BASE*30/100;
-            WHEN 'Accounting' THEN V_BONO_DEPTO := V_SALARIO_BASE*30/100;
-            ELSE V_BONO_DEPTO := 0;
+        --v_bono_depto
+        CASE v_departamento 
+            WHEN 'Human Resources' THEN v_bono_depto := v_salario_base*20/100;
+            WHEN 'Shipping' THEN v_bono_depto := v_salario_base*25/100;
+            WHEN 'IT' THEN v_bono_depto := v_salario_base*30/100;
+            WHEN 'Accounting' THEN v_bono_depto := v_salario_base*30/100;
+            ELSE v_bono_depto := 0;
         END CASE;
         
-        --V_BONO_TRABAJO
-        CASE V_TRABAJO 
-            WHEN 'Finance Manager' THEN V_BONO_TRABAJO := V_SALARIO_BASE*5/100;
-            WHEN 'Public Accountant' THEN V_BONO_TRABAJO := V_SALARIO_BASE*7/100;
-            WHEN 'Sales Manager' THEN V_BONO_TRABAJO := V_SALARIO_BASE*10/100;
-            WHEN 'Shipping Clerk' THEN V_BONO_TRABAJO := V_SALARIO_BASE*15/100;
-            WHEN 'Programmer' THEN V_BONO_TRABAJO := V_SALARIO_BASE*20/100;
-            ELSE V_BONO_TRABAJO := 0;
+        --v_bono_trabajo
+        CASE v_trabajo 
+            WHEN 'Finance Manager' THEN v_bono_trabajo := v_salario_base*5/100;
+            WHEN 'Public Accountant' THEN v_bono_trabajo := v_salario_base*7/100;
+            WHEN 'Sales Manager' THEN v_bono_trabajo := v_salario_base*10/100;
+            WHEN 'Shipping Clerk' THEN v_bono_trabajo := v_salario_base*15/100;
+            WHEN 'Programmer' THEN v_bono_trabajo := v_salario_base*20/100;
+            ELSE v_bono_trabajo := 0;
         END CASE;
         
-        --V_BONO_ANTIGUEDAD
-        IF V_ANTIGUEDAD BETWEEN 1 AND 5 THEN 
-            V_BONO_ANTIGUEDAD := V_SALARIO_BASE*10/100;
-        ELSIF V_ANTIGUEDAD BETWEEN 6 AND 15 THEN 
-            V_BONO_ANTIGUEDAD := V_SALARIO_BASE*20/100;
-        ELSIF V_ANTIGUEDAD > 15 THEN
-            V_BONO_ANTIGUEDAD := V_SALARIO_BASE*30/100;
+        --v_bono_antiguedad
+        IF v_antiguedad BETWEEN 1 AND 5 THEN 
+            v_bono_antiguedad := v_salario_base*10/100;
+        ELSIF v_antiguedad BETWEEN 6 AND 15 THEN 
+            v_bono_antiguedad := v_salario_base*20/100;
+        ELSIF v_antiguedad > 15 THEN
+            v_bono_antiguedad := v_salario_base*30/100;
         END IF;
         
-        V_DESC_SALUD := V_SALARIO_BASE*7/100;
-        V_DESC_AFP := V_SALARIO_BASE*12/100;
-        V_TOTAL_DESC := V_DESC_SALUD + V_DESC_AFP;
-        V_TOTAL_BONOS := V_BONO_DEPTO + V_BONO_TRABAJO + V_BONO_ANTIGUEDAD;
-        V_TOTAL_LIQUIDO := V_SALARIO_BASE + V_TOTAL_BONOS - V_TOTAL_DESC;
+        v_desc_salud := v_salario_base*7/100;
+        v_desc_afp := v_salario_base*12/100;
+        v_total_desc := v_desc_salud + v_desc_afp;
+        v_total_bonos := v_bono_depto + v_bono_trabajo + v_bono_antiguedad;
+        v_total_liquido := v_salario_base + v_total_bonos - v_total_desc;
         
-        INSERT INTO LIQUIDACION
-            VALUES(V_ID_EMP,
+        INSERT INTO liquidacion
+            VALUES(v_id_emp,
                     SYSDATE,
-                    V_SALARIO_BASE,
-                    V_BONO_DEPTO,
-                    V_BONO_TRABAJO,
-                    V_BONO_ANTIGUEDAD,
-                    V_DESC_SALUD,
-                    V_DESC_AFP,
-                    V_TOTAL_DESC,
-                    V_TOTAL_BONOS,
-                    V_TOTAL_LIQUIDO);
+                    v_salario_base,
+                    v_bono_depto,
+                    v_bono_trabajo,
+                    v_bono_antiguedad,
+                    v_desc_salud,
+                    v_desc_afp,
+                    v_total_desc,
+                    v_total_bonos,
+                    v_total_liquido);
                     
-        V_MIN_ID = V_MIN_ID + 1;
+        v_min_id = v_min_id + 1;
     
     END LOOP;
     
 END;
 
 /*
-
-tabla
-
-id_emp NUMBER(PK)
-fecha_liquidacion DATE(PK)
-salario_base NUMBER
-bono_depto NUMBER
-bono_trabajo NUMBER
-bono_antiguedad NUMBER
-desc_salud NUMBER
-desc_afp NUMBER
-total_desc NUMBER
-total_bonos NUMBER
-total_liquido NUMBER
-
 1. FECHA_LIQUIDACION es de la fecha actual
 
 2. BONO POR DPTO:
