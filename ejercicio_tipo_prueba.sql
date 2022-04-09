@@ -14,7 +14,7 @@ DECLARE
 
     --OBTENIDAS DE CONSULTAS
     v_idchofer          calculo_pago_mes.idchofer%TYPE;
-    v_rut               calculo_pago_mes.rut%TYPE := '11610873-9';
+    v_rut               calculo_pago_mes.rut%TYPE;
     v_nombrecompleto    calculo_pago_mes.nombrecompleto%TYPE;
     v_sueldo_base       chofer.sueldo_base%TYPE;
     v_porc_bono_ant     bono_antiguedad.porc%TYPE;
@@ -38,7 +38,7 @@ BEGIN
     
     FOR i IN (SELECT idchofer FROM chofer) LOOP --ITERACION EN SENTENCIA (CURSOR IMPLICITO)
     
-        --IDCHOFER, RUT, NOMBRES, SUELD, PORC_BONO_ANTIGUEDAD, CANT_CARGAS
+        -- IDCHOFER, RUT, NOMBRES, SUELD, PORC_BONO_ANTIGUEDAD, CANT_CARGAS
         SELECT c.idchofer,
                 c.rutchofer,
                 c.nombre||' '||c.apellido_p||' '||c.apellido_m,
@@ -75,10 +75,10 @@ BEGIN
             WHERE c.idchofer = i.idchofer
             GROUP BY c.idchofer, s.uf;
         
-        --BONO ANTIGUEDAD
+        -- BONO ANTIGUEDAD
         v_bono_antiguedad := TRUNC(v_sueldo_base * v_porc_bono_ant/100);
 
-        --BONO CARGAS
+        -- BONO CARGAS
         v_bono_cargas := 
             CASE 
                 WHEN v_cant_cargas = 1 THEN 20000
@@ -87,7 +87,7 @@ BEGIN
                 ELSE 0
             END;
         
-        --MONTO VIAJES
+        -- MONTO VIAJES
         v_monto_viajes := 
             CASE 
                 WHEN v_cant_viajes_mes BETWEEN 1 AND 3 THEN 25000
@@ -96,29 +96,29 @@ BEGIN
                 ELSE 0
             END;
         
-        --TOTAL IMPONIBLE
+        -- TOTAL IMPONIBLE
         v_total_imponible := v_sueldo_base + v_bono_antiguedad + v_monto_viajes;
 
-        --TOTAL NO IMPONIBLE
+        -- TOTAL NO IMPONIBLE
         v_total_noimponible := :b_monto_movilizacion + :b_monto_colacion + v_bono_cargas;
 
-        --TOTAL HABERES
+        -- TOTAL HABERES
         v_total_haberes := v_total_imponible + v_total_noimponible;
         
-        --DESCUENTO SALUD
+        -- DESCUENTO SALUD
         IF v_porc_uf = 0 THEN
             v_salud := TRUNC(v_total_imponible*7/100);
         ELSE 
             v_salud := TRUNC(v_porc_uf*:b_valor_uf);
         END IF;
         
-        --DESCUENTO AFP
+        -- DESCUENTO AFP
         v_afp := TRUNC(v_total_imponible*12/100);
 
-        --TOTAL DESCUENTOS
+        -- TOTAL DESCUENTOS
         v_total_descuentos := v_salud + v_afp;
 
-        --LIQUIDO
+        -- LIQUIDO
         v_liquido := v_total_haberes - v_total_descuentos;
         
         INSERT INTO calculo_pago_mes

@@ -1,3 +1,7 @@
+TRUNCATE TABLE liquidacion;
+
+DROP TABLE liquidacion CASCADE;
+
 CREATE TABLE liquidacion 
     (id_emp NUMBER NOT NULL, 
     fecha_liquidacion DATE NOT NULL,
@@ -12,8 +16,6 @@ CREATE TABLE liquidacion
     total_liquido NUMBER NOT NULL, 
     CONSTRAINT liquidacion PRIMARY KEY 
         (id_emp, fecha_liquidacion) ENABLE);
-
-TRUNCATE TABLE liquidacion;
 
 DECLARE 
 
@@ -63,26 +65,26 @@ BEGIN
         JOIN departments D ON D.department_id = E.department_id
         WHERE E.employee_id = v_min_id;
         
-        --v_bono_depto
+        v_bono_depto :=
         CASE v_departamento 
-            WHEN 'Human Resources' THEN v_bono_depto := v_salario_base*20/100;
-            WHEN 'Shipping' THEN v_bono_depto := v_salario_base*25/100;
-            WHEN 'IT' THEN v_bono_depto := v_salario_base*30/100;
-            WHEN 'Accounting' THEN v_bono_depto := v_salario_base*30/100;
-            ELSE v_bono_depto := 0;
-        END CASE;
+            WHEN 'Human Resources' THEN v_salario_base*20/100
+            WHEN 'Shipping' THEN v_salario_base*25/100
+            WHEN 'IT' THEN v_salario_base*30/100
+            WHEN 'Accounting' THEN v_salario_base*30/100
+            ELSE 0
+        END;
         
-        --v_bono_trabajo
+        v_bono_trabajo :=
         CASE v_trabajo 
-            WHEN 'Finance Manager' THEN v_bono_trabajo := v_salario_base*5/100;
-            WHEN 'Public Accountant' THEN v_bono_trabajo := v_salario_base*7/100;
-            WHEN 'Sales Manager' THEN v_bono_trabajo := v_salario_base*10/100;
-            WHEN 'Shipping Clerk' THEN v_bono_trabajo := v_salario_base*15/100;
-            WHEN 'Programmer' THEN v_bono_trabajo := v_salario_base*20/100;
-            ELSE v_bono_trabajo := 0;
-        END CASE;
+            WHEN 'Finance Manager' THEN v_salario_base*5/100
+            WHEN 'Public Accountant' THEN v_salario_base*7/100
+            WHEN 'Sales Manager' THEN v_salario_base*10/100
+            WHEN 'Shipping Clerk' THEN v_salario_base*15/100
+            WHEN 'Programmer' THEN v_salario_base*20/100
+            ELSE 0
+        END;
         
-        --v_bono_antiguedad
+        /*v_bono_antiguedad*/
         IF v_antiguedad BETWEEN 1 AND 5 THEN 
             v_bono_antiguedad := v_salario_base*10/100;
         ELSIF v_antiguedad BETWEEN 6 AND 15 THEN 
