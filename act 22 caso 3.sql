@@ -1,5 +1,3 @@
--- CASO 3
-
 SET SERVEROUTPUT ON
 
 DECLARE
@@ -23,6 +21,8 @@ DECLARE
     v_sb_enc NUMBER(4) := 900;
     
     v_meses_trab NUMBER(4);
+    v_num_aten NUMBER (2);
+    v_porc tramo_asig_atmed.porc_asig%TYPE;
 
 BEGIN
 
@@ -46,14 +46,37 @@ BEGIN
         ELSE 
             r_infomsii.meses_trabajados := v_meses_trab;
         END IF;
+        
+        r_infomsii.sueldo_base_anual := r_infomsii.sueldo_base_mensual*12;
+        
+        -- BONIF POR ATENCIONES DURANTE EL AÑO
+        
+        SELECT NVL(COUNT(a.ate_id), 0)
+            INTO v_num_aten
+            FROM medico m
+            LEFT JOIN atencion a ON a.med_run = m.med_run
+            WHERE m.med_run = i.numrun
+            AND EXTRACT(YEAR FROM a.fecha_atencion) = EXTRACT(YEAR FROM SYSDATE)-1;
+            
+        SELECT porc_asig
+            INTO v_porc
+            FROM tramo_asig_atmed
+            WHERE v_num_aten BETWEEN tramo_inf_atm AND tramo_sup_atm;
+            
+        r_infomsii.bonif_especial := r_infomsii.sueldo_base_mensual*v_porc/100;
             
         DBMS_OUTPUT.PUT_LINE(r_infomsii.anno_tributario);
         DBMS_OUTPUT.PUT_LINE(r_infomsii.numrun||v_rn_enc);
         DBMS_OUTPUT.PUT_LINE(TO_CHAR(v_dv_enc, 'FM099')||r_infomsii.dv_run);
         DBMS_OUTPUT.PUT_LINE(r_infomsii.nombre_completo);
         DBMS_OUTPUT.PUT_LINE(r_infomsii.cargo);
-        DBMS_OUTPUT.PUT_LINE(r_infomsii.sueldo_base_mensual||v_sb_enc);
         DBMS_OUTPUT.PUT_LINE(r_infomsii.meses_trabajados);
+        DBMS_OUTPUT.PUT_LINE(r_infomsii.sueldo_base_mensual||v_sb_enc);
+        DBMS_OUTPUT.PUT_LINE(r_infomsii.sueldo_base_anual);
+        -- BONIF ESPECIAL
+        -- SUELDO BRUTO ANUAL
+        -- RENTA IMPONIBLE ANUAL
+        DBMS_OUTPUT.PUT_LINE(r_infomsii.bonif_especial);
         DBMS_OUTPUT.PUT_LINE('-----------------------------');
         
         v_rn_enc := v_rn_enc +1;
