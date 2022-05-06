@@ -1,17 +1,22 @@
--- CASO 1 OK
+-- CASO 1
 
 SET SERVEROUTPUT ON
 
 DECLARE
 
-    TYPE tp_varray_multas IS VARRAY(7) -- declaracion tipo varray
+    -- declaracion tipo varray
+    TYPE tp_varray_multas IS VARRAY(7) 
         OF NUMBER(4);
     
-    v_multas tp_varray_multas := tp_varray_multas(1200, 1300, 1700, 1900, 1100, 2000, 2300); -- inicializacion y poblado de varray
+    -- inicializacion y poblado de varray
+    v_multas tp_varray_multas := tp_varray_multas(1200, 1300, 1700, 1900, 1100, 2000, 2300); 
+
+    -- declaracion registro con arquitectura de tabla pago_moroso
+    r_pagos_morosos pago_moroso%ROWTYPE; 
     
-    r_pagos_morosos pago_moroso%ROWTYPE; -- declaracion registro con rowtype de tabla pago_moroso
-    
-    CURSOR c_pagos_morosos IS -- declaracion de cursor explicito con query de atenciones con pagos morosos (ordenada)
+    -- declaracion de cursor explicito con query de atenciones con pagos morosos 
+    -- no usar parentesis si se usa order by
+    CURSOR c_pagos_morosos IS 
         SELECT p.pac_run pac_run, 
             p.dv_run pac_dv_run, 
             p.pnombre||' '||p.snombre||' '||p.apaterno||' '||p.amaterno pac_nombre,
@@ -35,17 +40,21 @@ DECLARE
 
 BEGIN
 
-    EXECUTE IMMEDIATE 'TRUNCATE TABLE pago_moroso'; -- trunca tabla en ejecucion
+    -- trunca tabla en ejecucion
+    EXECUTE IMMEDIATE 'TRUNCATE TABLE pago_moroso'; 
 
     OPEN c_pagos_morosos;
     
     LOOP
     
-        FETCH c_pagos_morosos INTO r_pagos_morosos; -- se llena el registro con el fetch de cursor
+        -- se llena el registro con el fetch de cursor
+        FETCH c_pagos_morosos INTO r_pagos_morosos; 
         
-        EXIT WHEN c_pagos_morosos%NOTFOUND; -- sale del loop si se termina el cursor
+        -- sale del loop si se termina el cursor
+        EXIT WHEN c_pagos_morosos%NOTFOUND; 
 
-        r_pagos_morosos.monto_multa := -- poblado de variable monto_multa en registro
+        -- poblado de variable monto_multa en registro segun resultado de control de condiciones
+        r_pagos_morosos.monto_multa := 
         CASE r_pagos_morosos.especialidad_atencion
             WHEN 'Cirugía General' THEN v_multas(1) * r_pagos_morosos.dias_morosidad
             WHEN 'Dermatología' THEN v_multas(1) * r_pagos_morosos.dias_morosidad
@@ -60,21 +69,26 @@ BEGIN
             WHEN 'Reumatología' THEN v_multas(7) * r_pagos_morosos.dias_morosidad
         END;
         
-        SELECT TRUNC(MONTHS_BETWEEN(SYSDATE, fecha_nacimiento)/12) -- valor de variable edad
+        -- asignacion en variable edad
+        SELECT TRUNC(MONTHS_BETWEEN(SYSDATE, fecha_nacimiento)/12) 
             INTO v_edad
             FROM paciente
             WHERE pac_run = r_pagos_morosos.pac_run;
         
-        IF v_edad >= 65 THEN -- si paciente moroso es de la tercera edad recibe descuentos segun tabla
+        -- si paciente moroso es de la tercera edad recibe descuentos segun tabla
+        -- si no se ejecuta el sentencia/into v_porc sigue siendo 0
+        IF v_edad >= 65 THEN 
             SELECT porcentaje_descto 
                 INTO v_porc
                 FROM porc_descto_3ra_edad
                 WHERE v_edad BETWEEN anno_ini AND anno_ter;
         END IF;
             
-        r_pagos_morosos.monto_multa := r_pagos_morosos.monto_multa - r_pagos_morosos.monto_multa*v_porc/100; -- aplicacion de descuentos
+        -- aplicacion de descuentos
+        r_pagos_morosos.monto_multa := r_pagos_morosos.monto_multa - r_pagos_morosos.monto_multa*v_porc/100; 
         
-        INSERT INTO pago_moroso VALUES r_pagos_morosos; -- insert con registro
+        -- insert utilizando registro
+        INSERT INTO pago_moroso VALUES r_pagos_morosos; 
         
     END LOOP;
     
@@ -84,7 +98,8 @@ END;
 
 -- CASO 2
 
-DROP TABLE MEDICO_SERVICIO_COMUNIDAD CASCADE CONSTRAINTS;
+-- se elimina tabla para resetear ultimo valor de secuencia
+DROP TABLE MEDICO_SERVICIO_COMUNIDAD CASCADE CONSTRAINTS; 
 
 CREATE TABLE MEDICO_SERVICIO_COMUNIDAD
 (id_med_scomun NUMBER(2) GENERATED ALWAYS AS IDENTITY MINVALUE 1 
@@ -100,7 +115,8 @@ CONSTRAINT PK_MED_SERV_COMUNIDAD PRIMARY KEY,
 
 DECLARE
 
-    CURSOR c_medicos IS
+    -- cursor explicito con datos de medicos y cantidad de atenciones en año anterior
+    CURSOR c_medicos IS 
     SELECT 0 id_med_scomun,
         u.nombre unidad,
         TO_CHAR(m.med_run,'09G999G999')||'-'||m.dv_run run_medico, 
@@ -120,13 +136,17 @@ DECLARE
     ORDER BY u.nombre,
         m.apaterno;
         
+    -- variable para determinar posteriormente el numero maximo de atenciones
     v_max_atenciones NUMBER(2) := -1;
     
+    -- registro con identica arquitectura a tabla a modificar
     r_atenciones medico_servicio_comunidad%ROWTYPE;
     
+    -- declaracion de tipo de array para utiliar posteriormente
     TYPE vt_tipo_destinaciones IS VARRAY(3) OF
         VARCHAR(50);
-        
+    
+    -- declaracion e inicializaicon de array con destinaciones
     v_destinaciones vt_tipo_destinaciones := vt_tipo_destinaciones(
         'Servicio de Atención Primaria de Urgencia (SAPU)',
         'Hospitales del área de la Salud Pública',
@@ -134,6 +154,7 @@ DECLARE
 
 BEGIN
     
+    -- ciclo para determinar maximo de atenciones en cursor c_medicos
     FOR reg_aten IN c_medicos LOOP
         IF reg_aten.total_aten_medicas > v_max_atenciones THEN
             v_max_atenciones := reg_aten.total_aten_medicas;
@@ -144,10 +165,12 @@ BEGIN
     
     LOOP
     
+        -- se introducen datos (los que estan ya listos) de cursor en fila actual del registro
         FETCH c_medicos INTO r_atenciones;
         
         EXIT WHEN c_medicos%NOTFOUND;
         
+        -- control de condiciones para determinar destinacion
         IF r_atenciones.unidad = 'ATENCIÓN AMBULATORIA' OR r_atenciones.unidad = 'ATENCIÓN ADULTO' THEN
             r_atenciones.destinacion := v_destinaciones(1);
         ELSIF r_atenciones.unidad = 'ATENCIÓN URGENCIA' THEN
@@ -176,6 +199,7 @@ BEGIN
             END IF;
         END IF;
 
+        -- insercion en tabla (el valor de la PK no es introducido ya que se genera de forma automatica)
         INSERT INTO medico_servicio_comunidad (
                 unidad,
                 run_medico,
