@@ -205,4 +205,100 @@ BEGIN
 
 END;
 
--- CASO 3
+-- CASO 3 (Me falta hacer que la tabla quede ordenada segun requerimiento)
+
+SET SERVEROUTPUT ON
+
+DECLARE
+
+    -- Cursor con las transacciones 
+    CURSOR c_transac IS
+        SELECT nro_tarjeta,
+            fecha_transaccion,
+            nro_transaccion,
+            cod_tptran_tarjeta,
+            monto_total_transaccion,
+            total_cuotas_transaccion
+        FROM transaccion_tarjeta_cliente;
+
+    -- Cursor de las cuotas pagadas en una determinada transaccion (por nro tarjeta y nro transac)
+    -- Deben ser cuotas pagadas el año anterior
+    CURSOR c_cuotas(p_tarjeta NUMBER, p_nro_transac NUMBER) IS
+        SELECT TO_CHAR(fecha_pago, 'MM/YYYY') mes_anno,
+            nro_cuota,
+            fecha_venc_cuota,
+            valor_cuota,
+            fecha_pago,
+            monto_pagado
+        FROM cuota_transac_tarjeta_cliente
+        WHERE nro_tarjeta = p_tarjeta AND nro_transaccion = p_nro_transac
+        AND EXTRACT(YEAR FROM fecha_pago) = EXTRACT(YEAR FROM SYSDATE) - 1;
+
+    r_balance_anual balance_anual_detalle_transac%ROWTYPE; -- Registro para el INSERT
+    
+    -- Otros valores necesarios para tabla final
+    v_run_cliente VARCHAR(12);
+    v_nombre_tptran VARCHAR2(50);
+    v_deuda_cuota NUMBER (10);
+    v_ultima_cuota DATE;
+    v_deuda_total_restante NUMBER(10);
+
+BEGIN
+
+    EXECUTE IMMEDIATE 'TRUNCATE TABLE balance_anual_detalle_transac';
+
+    FOR r_transac IN c_transac LOOP
+
+        -- Consulta por rut cliente
+        SELECT cli.numrun||'-'||cli.dvrun
+            INTO v_run_cliente
+            FROM tarjeta_cliente tc
+            JOIN cliente cli ON cli.numrun = tc.numrun
+            WHERE nro_tarjeta = r_transac.nro_tarjeta;
+            
+        -- Consulta por tipo de transaccion (nombre)
+        SELECT nombre_tptran_tarjeta 
+            INTO v_nombre_tptran
+            FROM tipo_transaccion_tarjeta
+            WHERE cod_tptran_tarjeta = r_transac.cod_tptran_tarjeta;
+    
+        FOR r_cuotas IN c_cuotas(r_transac.nro_tarjeta, r_transac.nro_transaccion) LOOP
+        
+            -- Consulta por vencimiento de la ultima cuota de transaccion
+            SELECT MAX(fecha_venc_cuota)
+                INTO v_ultima_cuota
+                FROM cuota_transac_tarjeta_cliente
+                WHERE nro_tarjeta = r_transac.nro_tarjeta
+                AND nro_transaccion = r_transac.nro_transaccion;
+            
+            -- Diferencia entre valor de la cuota y monto pagado por esa cuota
+            v_deuda_cuota := r_cuotas.valor_cuota - r_cuotas.monto_pagado;
+            
+            /*  Calcula la deuda restante, con el monto total adeudado menos valor de la cuota multiplicado por el numero de la cuota
+                por lo tanto el valor siempre va disminuyendo */
+            v_deuda_total_restante := r_transac.monto_total_transaccion - r_cuotas.nro_cuota * r_cuotas.valor_cuota;
+            
+            -- Poblado de registro
+            r_balance_anual.mes_anno := r_cuotas.mes_anno;
+            r_balance_anual.run_cliente := v_run_cliente;
+            r_balance_anual.nro_tarjeta := r_transac.nro_tarjeta;
+            r_balance_anual.fecha_transaccion := r_transac.fecha_transaccion;
+            r_balance_anual.nro_transaccion := r_transac.nro_transaccion;
+            r_balance_anual.tipo_transaccion := v_nombre_tptran;
+            r_balance_anual.monto_total_transaccion := r_transac.monto_total_transaccion;
+            r_balance_anual.fecha_venc_ult_cuota := v_ultima_cuota;
+            r_balance_anual.nro_cuota_pagada := r_cuotas.nro_cuota||'/'||r_transac.total_cuotas_transaccion;
+            r_balance_anual.fecha_venc_cuota := r_cuotas.fecha_venc_cuota;
+            r_balance_anual.valor_cuota := r_cuotas.valor_cuota;
+            r_balance_anual.fecha_pago := r_cuotas.fecha_pago;
+            r_balance_anual.monto_pagado := r_cuotas.monto_pagado;
+            r_balance_anual.deuda_pago_cuota := v_deuda_cuota;
+            r_balance_anual.deuda_por_pagar := v_deuda_total_restante + v_deuda_cuota; -- se considera deuda de cuota
+            
+            INSERT INTO balance_anual_detalle_transac VALUES r_balance_anual;
+        
+        END LOOP;
+
+    END LOOP;
+
+END;
