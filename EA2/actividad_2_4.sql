@@ -204,3 +204,114 @@ BEGIN
     END LOOP;
 
 END;
+
+-- CASO 3
+
+SET SERVEROUTPUT ON
+
+DECLARE
+    
+    CURSOR c_cuota_socio  IS
+    SELECT s.nro_socio,
+        s.numrun||'-'||s.dvrun run_socio,
+        cs.nro_solic_credito,
+        c.nombre_credito tipo_credito,
+        cs.monto_total_credito,
+        cs.total_cuotas_credito nro_total_cuotas,
+        ccs.nro_cuota nro_cuota_mes,
+        ccs.valor_cuota valor_cuota_mes,
+        ccs.fecha_venc_cuota fecha_venc_cuota_mes
+    FROM socio s
+    JOIN credito_socio cs ON cs.nro_socio = s.nro_socio
+    JOIN credito c ON c.cod_credito = cs.cod_credito
+    JOIN cuota_credito_socio ccs ON ccs.nro_solic_credito = cs.nro_solic_credito
+    WHERE TO_CHAR(ccs.fecha_venc_cuota, 'MMYYYY') = TO_CHAR(SYSDATE, 'MMYYYY')
+    ORDER BY ccs.fecha_venc_cuota, s.nro_socio;
+    
+    rt_pag_mens_cred pago_mensual_credito%ROWTYPE;
+    
+    v_saldo_mes_ant cuota_credito_socio.saldo_por_pagar%TYPE;
+    v_atraso_mes_ant NUMBER(2);
+    v_porc_multa multa_mora.porc_multa%TYPE;
+    v_edad NUMBER(3);
+    v_error_mens VARCHAR2(200);
+    v_multa NUMBER(7);
+    v_rebaja_trc_edad NUMBER(6);
+    
+BEGIN
+
+    EXECUTE IMMEDIATE 'TRUNCATE TABLE pago_mensual_credito';
+
+    FOR i IN c_cuota_socio LOOP
+    
+        -- Obtencion de salgo por pagar mes anterior y dias de atraso
+        SELECT saldo_por_pagar, 
+            fecha_pago_cuota-fecha_venc_cuota
+            INTO v_saldo_mes_ant,
+                v_atraso_mes_ant
+            FROM cuota_credito_socio
+            WHERE nro_solic_credito = i.nro_solic_credito
+            AND TO_CHAR(fecha_venc_cuota, 'MMYYYY') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'MMYYYY');
+        
+        -- Calculo multa
+        IF v_atraso_mes_ant > 0 THEN
+            -- Bloque porcentaje multa
+            BEGIN
+                -- Obtencion de porcentaje de multa
+                SELECT porc_multa
+                    INTO v_porc_multa
+                    FROM multa_mora
+                    WHERE v_atraso_mes_ant BETWEEN tramo_dia_min_atraso AND tramo_dia_max_atraso;
+                
+                v_multa := ROUND(i.monto_total_credito * v_porc_multa/100);
+            
+            EXCEPTION
+                WHEN OTHERS THEN
+                v_error_mens := SQLERRM;
+                INSERT INTO error_proceso (correl_error, sentencia_error, descrip_error)
+                    VALUES (seq_error.NEXTVAL, 'Error al obtener porcentaje de multa. Dias de atraso: '||
+                    v_atraso_mes_ant||' Solic de credito nro: '||i.nro_solic_credito, v_error_mens);
+                v_multa := 0;
+            END;
+        ELSIF v_atraso_mes_ant <= 0 THEN
+            v_atraso_mes_ant := 0;
+            v_multa := 0;
+        END IF;
+        
+        -- Obtencion edad 
+        SELECT TRUNC(MONTHS_BETWEEN(SYSDATE, fecha_nacimiento)/12)
+        INTO v_edad
+        FROM socio
+        WHERE nro_socio = i.nro_socio;
+        
+        -- Calculo rebaja cuota del mes con 65 años o mas
+        IF v_edad >= 65 THEN
+            v_rebaja_trc_edad := i.valor_cuota_mes*5/100;
+        ELSE v_rebaja_trc_edad := 0;
+        END IF;
+        
+        -- Poblado de registro de tabla con valores
+        rt_pag_mens_cred.fecha_proceso := TO_CHAR(SYSDATE, 'MMYYYY');
+        rt_pag_mens_cred.nro_socio := i.nro_socio;
+        rt_pag_mens_cred.run_socio := i.run_socio;
+        rt_pag_mens_cred.nro_solic_credito := i.nro_solic_credito;
+        rt_pag_mens_cred.tipo_credito := i.tipo_credito;
+        rt_pag_mens_cred.monto_total_credito := i.monto_total_credito;
+        rt_pag_mens_cred.nro_total_cuotas := i.nro_total_cuotas;
+        rt_pag_mens_cred.nro_cuota_mes := i.nro_cuota_mes;
+        rt_pag_mens_cred.valor_cuota_mes := i.valor_cuota_mes;
+        rt_pag_mens_cred.fecha_venc_cuota_mes := i.fecha_venc_cuota_mes;
+        rt_pag_mens_cred.saldo_pago_mes_ant := v_saldo_mes_ant;
+        rt_pag_mens_cred.dias_atraso_pago_mes_ant := v_atraso_mes_ant;
+        rt_pag_mens_cred.multa_atraso_pago_mes_ant := v_multa;
+        rt_pag_mens_cred.valor_rebajar_65_annos := v_rebaja_trc_edad;
+        
+        --Totalizador
+        rt_pag_mens_cred.valor_total_cuota_mes := i.valor_cuota_mes + v_saldo_mes_ant + v_multa - v_rebaja_trc_edad;
+        
+        -- Insercion de fila
+        INSERT INTO pago_mensual_credito VALUES rt_pag_mens_cred;
+        
+    END LOOP;
+
+END;
