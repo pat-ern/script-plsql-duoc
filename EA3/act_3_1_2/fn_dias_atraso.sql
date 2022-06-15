@@ -1,5 +1,6 @@
 create or replace FUNCTION fn_dias_atraso(p_anno_mes IN NUMBER, p_id_edif IN NUMBER, p_nro_depto IN NUMBER) RETURN NUMBER IS
 
+    v_fecha_pago_gc gasto_comun.fecha_pago_gc%TYPE;
     v_dias_atraso NUMBER;
 
 BEGIN
@@ -23,7 +24,16 @@ BEGIN
 EXCEPTION
     
     WHEN OTHERS THEN
-        v_dias_atraso := 0;
+        
+        SELECT fecha_pago_gc
+            INTO v_fecha_pago_gc
+            FROM gasto_comun
+            WHERE anno_mes_pcgc = p_anno_mes-1
+            AND id_edif = p_id_edif
+            AND nro_depto = p_nro_depto;
+            
+        v_dias_atraso := TRUNC(SYSDATE - v_fecha_pago_gc);
+        
         RETURN v_dias_atraso;
 
 END fn_dias_atraso;
