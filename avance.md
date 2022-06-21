@@ -1,14 +1,7 @@
 # Avance
 
-## Procedimientos
-[x] 3.1.1
-[ ] 3.1.2	
-
-## Funciones 
-[ ] 3.2.1	
-
 ## 20-06 
-[ ] 3.2.2   Funciones 
+[x] 3.2.2   Funciones 
 [ ] 3.3.1	Packages
 
 ## 21-06
