@@ -1,17 +1,16 @@
 # Avance
 
-## 20-06 
-[x] 3.2.2   Funciones 
-[ ] 3.3.1	Packages
-
 ## 21-06
-[ ] 3.4.1	Triggers
-[ ] 3.3.2	Packages
+3.3.1	Packages
+3.4.1	Triggers
 
-## Triggers
-[ ] 3.4.2	22-06
-[ ] 3.4.3	24-06
+## 24-06
+3.5.1	SQL Dinamico
+3.3.2	Packages
 
-## SQL Dinamico
-[ ] 3.5.1	25-06
-[ ] 3.5.2	27-06
+## 25-06
+3.4.2	Triggers
+
+## 27-06
+3.5.2	SQL Dinamico 27-06
+3.4.3	Triggers 24-06
